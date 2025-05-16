@@ -1,7 +1,7 @@
 "use client";
 
-import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
-import { ChatSession, Message } from '@/types/chat';
+import React, {createContext, useContext, useState, ReactNode, useEffect} from 'react';
+import {ChatSession, Message} from '@/types/chat';
 
 interface ChatContextType {
     chatSessions: ChatSession[];
@@ -21,7 +21,7 @@ interface ChatProviderProps {
 
 const generateId = () => Date.now().toString() + Math.random().toString(36).substring(2, 9);
 
-export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
+export const ChatProvider: React.FC<ChatProviderProps> = ({children}) => {
     const [chatSessions, setChatSessions] = useState<ChatSession[]>([]);
     const [activeChatId, setActiveChatId] = useState<string | null>(null);
     const [isLoadingAiResponse, setIsLoadingAiResponse] = useState<boolean>(false);
@@ -87,7 +87,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
         setChatSessions(prevSessions =>
             prevSessions.map(session =>
                 session.id === sessionId
-                    ? { ...session, messages: [...session.messages, newMessage] }
+                    ? {...session, messages: [...session.messages, newMessage]}
                     : session
             )
         );
@@ -96,23 +96,21 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
     const sendMessageToAI = async (sessionId: string, userMessageText: string) => {
         if (!sessionId) return;
 
-        addMessageToSession(sessionId, { text: userMessageText, sender: 'user' });
+        addMessageToSession(sessionId, {text: userMessageText, sender: 'user'});
 
-        const typingIndicatorId = generateId();
+        // Додаємо typing indicator без id та timestamp
         addMessageToSession(sessionId, {
-            id: typingIndicatorId,
             text: '',
             sender: 'ai',
-            isTyping: true,
-            timestamp: Date.now()
+            isTyping: true
         });
         setIsLoadingAiResponse(true);
 
         try {
             const response = await fetch('/api/gemini-proxy', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ message: userMessageText }),
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({message: userMessageText}),
             });
 
             setIsLoadingAiResponse(false);
@@ -120,28 +118,27 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
             setChatSessions(prevSessions =>
                 prevSessions.map(session =>
                     session.id === sessionId
-                        ? { ...session, messages: session.messages.filter(msg => !(msg.isTyping && msg.id === typingIndicatorId)) }
+                        ? {...session, messages: session.messages.filter(msg => !msg.isTyping)}
                         : session
                 )
             );
 
-
             if (!response.ok) {
-                const errorData = await response.json().catch(() => ({ error: "Unknown API error" }));
+                const errorData = await response.json().catch(() => ({error: "Unknown API error"}));
                 throw new Error(errorData.error || `API request failed with status ${response.status}`);
             }
 
             const data = await response.json();
             const aiResponseText = data.reply || "Sorry, I couldn't get a response.";
 
-            addMessageToSession(sessionId, { text: aiResponseText, sender: 'ai' });
+            addMessageToSession(sessionId, {text: aiResponseText, sender: 'ai'});
 
         } catch (error) {
             setIsLoadingAiResponse(false);
             setChatSessions(prevSessions =>
                 prevSessions.map(session =>
                     session.id === sessionId
-                        ? { ...session, messages: session.messages.filter(msg => !(msg.isTyping && msg.id === typingIndicatorId)) }
+                        ? {...session, messages: session.messages.filter(msg => !msg.isTyping)}
                         : session
                 )
             );
